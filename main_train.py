@@ -57,7 +57,8 @@ def main(opts, **kwargs):
     model = get_model(opts)
 
     if num_gpus == 0:
-        logger.error('Need atleast 1 GPU for training. Got {} GPUs'.format(num_gpus))
+        model = model.to(device=device)
+        #logger.error('Need atleast 1 GPU for training. Got {} GPUs'.format(num_gpus))
     elif num_gpus == 1:
         model = model.to(device=device)
     elif is_distributed:

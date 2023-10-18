@@ -1,6 +1,7 @@
 from torch import nn, Tensor
 import math
 import torch
+import copy
 import numpy as np
 from torch.nn import functional as F
 from typing import Optional, Dict, Tuple
@@ -487,11 +488,29 @@ class gcc_ca_mf_block(BaseModule):
 
     def forward(self, x: Tensor) -> Tensor:
 
+        half_block = True
+        print("-"*20)
+        print("Shape X:")
+        print(np.shape(x))
         x_1, x_2 = torch.chunk(x, 2, 1)
         x_1_res, x_2_res = x_1, x_2
         _, _, f_s, _ = x_1.shape
 
-        K_1_H, K_1_W, K_2_H, K_2_W = self.get_instance_kernel(f_s)
+        x1_origin, x2_origin = x_1, x_2
+        x1_origin, x2_origin = x1_origin.detach().numpy(), x2_origin.detach().numpy()
+        even_indices = [i for i in range(f_s) if i % 2 == 0]
+        f_s_half = len(even_indices)
+
+        if half_block:
+            K_1_H, K_1_W, _, _ = self.get_instance_kernel(f_s_half)
+            _, _, K_2_H, K_2_W = self.get_instance_kernel(f_s)
+        else:
+            K_1_H, K_1_W, K_2_H, K_2_W = self.get_instance_kernel(f_s)
+
+        print("Shape K_1_H:")
+        print(np.shape(K_1_H))
+        print("Shape K_2_H:")
+        print(np.shape(K_2_H))
 
         if self.use_pe:
             pe_1_H, pe_1_W, pe_2_H, pe_2_W = self.get_instance_pe(f_s)
@@ -501,6 +520,10 @@ class gcc_ca_mf_block(BaseModule):
         if self.use_pe:
             x_1, x_2 = x_1 + pe_1_H, x_2 + pe_1_W
 
+        if half_block:
+            x_1 = x_1[:, :, even_indices, :]
+            x_2 = x_2[:, :, :, even_indices]
+
         x_1, x_2 = self.pre_Norm_1(x_1), self.pre_Norm_2(x_2)
 
         # stage 1
@@ -508,6 +531,17 @@ class gcc_ca_mf_block(BaseModule):
                          groups=self.dim)
         x_2_1 = F.conv2d(torch.cat((x_2, x_2[:, :, :, :-1]), dim=3), weight=K_1_W, bias=self.meta_1_W_bias, padding=0,
                          groups=self.dim)
+
+        if half_block:
+            for i in range(f_s_half):
+                temp_x_1_1 = x_1_1[:, :, i, :]
+                x1_origin[:, :, i * 2, :] = temp_x_1_1.detach().numpy()
+                temp_x_2_1 = x_2_1[:, :, :, i]
+                x2_origin[:, :, :, i*2] = temp_x_2_1.detach().numpy()
+
+            x_1_1 = torch.from_numpy(x1_origin)
+            x_2_1 = torch.from_numpy(x2_origin)
+
         if self.mid_mix:
             mid_rep = torch.cat((x_1_1, x_2_1), dim=1)
             x_1_1, x_2_1 = torch.chunk(self.mixer(mid_rep), chunks=2, dim=1)

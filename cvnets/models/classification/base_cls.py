@@ -185,9 +185,11 @@ class BaseEncoder(nn.Module):
             overall_macs += classifier_macs
 
             logger.double_dash_line(dashes=65)
-            print('{:<20} = {:>8.3f} M'.format('Overall parameters', overall_params / 1e6))
+            #print('{:<20} = {:>8.3f} M'.format('Overall parameters', overall_params / 1e6))
+            print('{:<20} = {:>8}'.format('Overall parameters', overall_params))
             # Counting Addition and Multiplication as 1 operation
-            print('{:<20} = {:>8.3f} M'.format('Overall MACs', overall_macs / 1e6))
+            #print('{:<20} = {:>8.3f} Mi'.format('Overall MACs', overall_macs / 1e6))
+            print('{:<20} = {:>8}'.format('Overall MACs', overall_macs ))
             overall_params_py = sum([p.numel() for p in self.parameters()])
             print('{:<20} = {:>8.3f} M'.format('Overall parameters (sanity check)', overall_params_py / 1e6))
             logger.double_dash_line(dashes=65)
