@@ -566,8 +566,8 @@ class gcc_ca_mf_block(BaseModule):
             x_1_1, x_2_1 = torch.chunk(self.mixer(mid_rep), chunks=2, dim=1)
 
         # stage 2
-        x1_origin, x2_origin = x_1_1, x_2_1
-        x1_origin, x2_origin = x1_origin.detach().numpy(), x2_origin.detach().numpy()
+        x1_1_origin, x2_1_origin = x_1_1, x_2_1
+        x1_1_origin, x2_1_origin = x1_1_origin.detach().numpy(), x2_1_origin.detach().numpy()
 
         if self.use_pe:
             x_1_1, x_2_1 = x_1_1 + pe_2_W, x_2_1 + pe_2_H
@@ -584,12 +584,12 @@ class gcc_ca_mf_block(BaseModule):
         if second_half_block:
             for i in range(f_s_half):
                 temp_x_1_2 = x_1_2[:, :, i, :]
-                x1_origin[:, :, i * 2, :] = temp_x_1_2.detach().numpy()
+                x1_1_origin[:, :, i * 2, :] = temp_x_1_2.detach().numpy()
                 temp_x_2_2 = x_2_2[:, :, :, i]
-                x2_origin[:, :, :, i*2] = temp_x_2_2.detach().numpy()
+                x2_1_origin[:, :, :, i*2] = temp_x_2_2.detach().numpy()
 
-            x_1_2 = torch.from_numpy(x1_origin)
-            x_2_2 = torch.from_numpy(x2_origin)
+            x_1_2 = torch.from_numpy(x1_1_origin)
+            x_2_2 = torch.from_numpy(x2_1_origin)
 
         # residual
         x_1 = x_1_res + x_1_2
