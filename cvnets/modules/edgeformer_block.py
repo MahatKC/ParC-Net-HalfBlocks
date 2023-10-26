@@ -491,7 +491,7 @@ class gcc_ca_mf_block(BaseModule):
         first_half_block = True
         second_half_block = False
         print_dimensions = False
-
+        
         if print_dimensions:
             print("-"*20)
             print("Shape X:")
@@ -501,16 +501,21 @@ class gcc_ca_mf_block(BaseModule):
         x_1_res, x_2_res = x_1, x_2
         _, _, f_s, _ = x_1.shape
 
-        x1_origin, x2_origin = x_1, x_2
-        x1_origin, x2_origin = x1_origin.detach().numpy(), x2_origin.detach().numpy()
+        # Save a copy of the original tensor
+        if first_half_block:
+            x1_origin, x2_origin = x_1.clone(), x_2.clone()
 
-        even_indices = [i for i in range(f_s) if i % 2 == 0]
-        f_s_half = len(even_indices)
+        # Get even indices of the tensor
+        if first_half_block or second_half_block:
+            even_indices = torch.arange(0, x_1.shape[2], 2)
+            f_s_half = even_indices.shape[0]
 
         K_1_H, K_1_W, K_2_H, K_2_W = self.get_instance_kernel(f_s)
+        
         if first_half_block:
             #overwrites K_1
             K_1_H, K_1_W, _, _ = self.get_instance_kernel(f_s_half)
+        
         if second_half_block:
             # overwrites K_2
             _, _, K_2_H, K_2_W = self.get_instance_kernel(f_s_half)
@@ -531,6 +536,7 @@ class gcc_ca_mf_block(BaseModule):
         if self.use_pe:
             x_1, x_2 = x_1 + pe_1_H, x_2 + pe_1_W
 
+        # Filter tensor with even indices
         if first_half_block:
             x_1 = x_1[:, :, even_indices, :]
             x_2 = x_2[:, :, :, even_indices]
@@ -551,27 +557,25 @@ class gcc_ca_mf_block(BaseModule):
         x_2_1 = F.conv2d(torch.cat((x_2, x_2[:, :, :, :-1]), dim=3), weight=K_1_W, bias=self.meta_1_W_bias, padding=0,
                          groups=self.dim)
 
+        # Update tensor with new even and original old indices
         if first_half_block:
-            for i in range(f_s_half):
-                temp_x_1_1 = x_1_1[:, :, i, :]
-                x1_origin[:, :, i * 2, :] = temp_x_1_1.detach().numpy()
-                temp_x_2_1 = x_2_1[:, :, :, i]
-                x2_origin[:, :, :, i*2] = temp_x_2_1.detach().numpy()
-
-            x_1_1 = torch.from_numpy(x1_origin)
-            x_2_1 = torch.from_numpy(x2_origin)
+            x1_origin[:, :, ::2, :] = x_1
+            x2_origin[:, :, :, ::2] = x_2
+            x_1_1 = x1_origin
+            x_2_1 = x2_origin
 
         if self.mid_mix:
             mid_rep = torch.cat((x_1_1, x_2_1), dim=1)
             x_1_1, x_2_1 = torch.chunk(self.mixer(mid_rep), chunks=2, dim=1)
 
         # stage 2
-        x1_1_origin, x2_1_origin = x_1_1, x_2_1
-        x1_1_origin, x2_1_origin = x1_1_origin.detach().numpy(), x2_1_origin.detach().numpy()
+        if second_half_block:
+            x1_1_origin, x2_1_origin = x_1_1.clone(), x_2_1.clone()
 
         if self.use_pe:
             x_1_1, x_2_1 = x_1_1 + pe_2_W, x_2_1 + pe_2_H
 
+        # Filter tensor with even indices
         if second_half_block:
             x_1_1 = x_1_1[:, :, even_indices, :]
             x_2_1 = x_2_1[:, :, :, even_indices]
@@ -580,16 +584,13 @@ class gcc_ca_mf_block(BaseModule):
                          padding=0, groups=self.dim)
         x_2_2 = F.conv2d(torch.cat((x_2_1, x_2_1[:, :, :-1, :]), dim=2), weight=K_2_H, bias=self.meta_2_H_bias,
                          padding=0, groups=self.dim)
-
+        
+        # Update tensor with new even and original old indices
         if second_half_block:
-            for i in range(f_s_half):
-                temp_x_1_2 = x_1_2[:, :, i, :]
-                x1_1_origin[:, :, i * 2, :] = temp_x_1_2.detach().numpy()
-                temp_x_2_2 = x_2_2[:, :, :, i]
-                x2_1_origin[:, :, :, i*2] = temp_x_2_2.detach().numpy()
-
-            x_1_2 = torch.from_numpy(x1_1_origin)
-            x_2_2 = torch.from_numpy(x2_1_origin)
+            x1_1_origin[:, :, ::2, :] = x_1_2
+            x2_1_origin[:, :, :, ::2] = x_2_2
+            x_1_2 = x1_1_origin
+            x_2_2 = x2_1_origin
 
         # residual
         x_1 = x_1_res + x_1_2
