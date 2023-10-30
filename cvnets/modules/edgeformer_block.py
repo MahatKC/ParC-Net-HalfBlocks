@@ -527,6 +527,8 @@ class gcc_ca_mf_block(BaseModule):
             print(np.shape(K_1_W))
             print("Shape K_2_H:")
             print(np.shape(K_2_H))
+            print("Shape K_2_W:")
+            print(np.shape(K_2_W))
 
         if self.use_pe:
             pe_1_H, pe_1_W, pe_2_H, pe_2_W = self.get_instance_pe(f_s)
@@ -541,13 +543,11 @@ class gcc_ca_mf_block(BaseModule):
             x_1 = x_1[:, :, even_indices, :]
             x_2 = x_2[:, :, :, even_indices]
 
-        if print_dimensions:
-            print("X1 Shape:")
-            print(np.shape(x_1))
-
         x_1, x_2 = self.pre_Norm_1(x_1), self.pre_Norm_2(x_2)
 
         if print_dimensions:
+            print("X1 Shape:")
+            print(np.shape(x_1))
             print("Concat shape:")
             print(np.shape(torch.cat((x_1, x_1[:, :, :-1, :]), dim=2)))
 
@@ -577,8 +577,14 @@ class gcc_ca_mf_block(BaseModule):
 
         # Filter tensor with even indices
         if second_half_block:
-            x_1_1 = x_1_1[:, :, even_indices, :]
-            x_2_1 = x_2_1[:, :, :, even_indices]
+            x_1_1 = x_1_1[:, :, :, even_indices]
+            x_2_1 = x_2_1[:, :, even_indices, :]
+
+        if print_dimensions:
+            print("X1_1 Shape:")
+            print(np.shape(x_1_1))
+            print("Concat shape:")
+            print(np.shape(torch.cat((x_1_1, x_1_1[:, :, :, :-1]), dim=3)))
 
         x_1_2 = F.conv2d(torch.cat((x_1_1, x_1_1[:, :, :, :-1]), dim=3), weight=K_2_W, bias=self.meta_2_W_bias,
                          padding=0, groups=self.dim)
@@ -587,8 +593,8 @@ class gcc_ca_mf_block(BaseModule):
         
         # Update tensor with new even and original old indices
         if second_half_block:
-            x1_1_origin[:, :, ::2, :] = x_1_2
-            x2_1_origin[:, :, :, ::2] = x_2_2
+            x1_1_origin[:, :, :, ::2] = x_1_2
+            x2_1_origin[:, :, ::2, :] = x_2_2
             x_1_2 = x1_1_origin
             x_2_2 = x2_1_origin
 
