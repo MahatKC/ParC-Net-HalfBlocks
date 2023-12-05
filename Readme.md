@@ -9,14 +9,20 @@ Fork from the [original repository](https://github.com/hkzhang-git/ParC-Net) for
 
 Our goal here was to increase the performance of the original ParC-Net architecture by reducing redundancy. For that matter, we designed the ParC-Half blocks, which do convolution only for the even-indexed rows/columns of the input, which are shown in the image below.
 
-<img src="https://raw.githubusercontent.com/MahatKC/ParC-Net-HalfBlocks/main/readme_images/HalfBlockV.png" align="middle" width="800" ></a>
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MahatKC/ParC-Net-HalfBlocks/main/readme_images/HalfBlockV.png" align="middle" width="800" ></a>
+</p>
 
 Then, using the proposed ParC-Half blocks, we did 3 experiments to compare our approach with the approach from the paper:
 
-<img src="https://raw.githubusercontent.com/MahatKC/ParC-Net-HalfBlocks/main/readme_images/Experiments.png" align="middle" width="550" ></a>
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MahatKC/ParC-Net-HalfBlocks/main/readme_images/Experiments.png" align="middle" width="550" ></a>
+</p>
 
 The following results were achieved, which are compared to the pre-trained model of the paper (provided in their repository):
 
-<img src="https://raw.githubusercontent.com/MahatKC/ParC-Net-HalfBlocks/main/readme_images/TestResults.png" align="middle" width="400" ></a>
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MahatKC/ParC-Net-HalfBlocks/main/readme_images/TestResults.png" align="middle" width="400" ></a>
+</p>
 
 Therefore, we were able to improve upon the accuracy of the original model while decreasing its cost.
